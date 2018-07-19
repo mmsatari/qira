@@ -54,3 +54,34 @@ fi
 cd qemu/qemu-latest
 ./configure --target-list=i386-linux-user,x86_64-linux-user,arm-linux-user,ppc-linux-user,aarch64-linux-user,mips-linux-user,mipsel-linux-user --enable-tcg-interpreter --enable-debug-tcg --cpu=unknown --python="$python"
 make -j $(grep processor < /proc/cpuinfo | wc -l)
+
+cd ../
+
+# clone repo if there's not any
+if [ ! -d qemu-cgc ]; then
+    git clone --branch base_cgc --depth=1 https://github.com/mechaphish/qemu-cgc
+fi
+
+cd qemu-cgc
+echo $(dirs)
+
+# if compiled previously recompile again
+if [ -d i386-linux-user ]; then
+    make clean
+fi
+
+patch -p1 < ../../cgc.patch
+
+# configure CGC-qemu-base
+if [[ $(./cgc_configure_opt) && $? != 0 ]]; then
+    echo "Error: unable to configure shellphish-qemu-cgc"
+    exit 1
+fi
+
+# building CGC-qemu-base
+if [[ $(make -j4) && $? != 0 ]]; then
+    echo "Error: unable to build shellphish-qemu-cgc"
+    exit 1
+fi
+
+ln -s qemu-cgc/i386-linux-user/qemu-i386 ../qira-cgc
